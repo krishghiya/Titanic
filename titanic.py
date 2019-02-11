@@ -12,23 +12,64 @@ import pandas as pd
 train_set = pd.read_csv("train.csv")
 test_set = pd.read_csv("test.csv")
 
+#dataset = pd.concat([train_set, test_set])
+
+
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
  
 label_encoder = LabelEncoder()
 train_set.iloc[:, 4] = label_encoder.fit_transform(train_set.iloc[:, 4])
 train_set = train_set[pd.notnull(train_set['Embarked'])]
 train_set.iloc[:, 11] = label_encoder.fit_transform(train_set.iloc[:, 11])
+train_embarked = train_set["Embarked"]
  
-label_encoder_1hot = OneHotEncoder(categorical_features=[11])
-train_set = label_encoder_1hot.fit_transform(train_set).toarray()
+label_encoder_1hot = OneHotEncoder(sparse=False)
+train_embarked = label_encoder_1hot.fit_transform(train_embarked.values.reshape(-1,1))
 
-from sklearn.metrics import mean_absolute_error
+test_set.iloc[:, 3] = label_encoder.fit_transform(test_set.iloc[:, 3])
+test_set = test_set[pd.notnull(test_set['Embarked'])]
+test_set.iloc[:, 10] = label_encoder.fit_transform(test_set.iloc[:, 10])
+test_embarked = test_set["Embarked"]
+ 
+test_embarked = label_encoder_1hot.fit_transform(test_embarked.values.reshape(-1,1))
+
+del train_set["Embarked"]
+del test_set["Embarked"]
+
+train_set["EmbarkedS"] = train_embarked[:, 0]
+train_set["EmbarkedC"] = train_embarked[:, 1]
+#train_set["EmbarkedQ"] = train_embarked[:, 2]
+
+test_set["EmbarkedS"] = test_embarked[:, 0]
+test_set["EmbarkedC"] = test_embarked[:, 1]
+#test_set["EmbarkedQ"] = test_embarked[:, 2]
+
+train_set = train_set.select_dtypes(exclude=['object'])
+test_set = test_set.select_dtypes(exclude=['object'])
+
+#from sklearn.metrics import mean_absolute_error
+
+from sklearn.preprocessing import Imputer
+
+imputer = Imputer(strategy="mean")
+
+train_set["Age"] = imputer.fit_transform(train_set["Age"].values.reshape(-1,1))
+test_set["Age"] = imputer.fit_transform(test_set["Age"].values.reshape(-1,1))
+
+test_set = test_set.fillna(test_set.median())
 
 X_train = train_set.iloc[:, train_set.columns != 'Survived']
 y_train = train_set["Survived"]
 X_test = test_set.iloc[:, test_set.columns != 'Survived']
 
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
 
-reg = RandomForestRegressor()
-#reg.fit(X_train, y_train)
+reg = RandomForestClassifier()
+reg.fit(X_train, y_train)
+predictions = reg.predict(X_test)
+
+submission = pd.DataFrame({
+        "PassengerId": X_test["PassengerId"],
+        "Survived": predictions
+    })
+submission.to_csv('submission.csv', index=False)
