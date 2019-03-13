@@ -18,34 +18,12 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 #One hot encoding the "embarked" column for both train and test sets
  
+train_set = pd.get_dummies(train_set, columns=['Embarked'], drop_first=False)
+test_set = pd.get_dummies(test_set, columns=['Embarked'], drop_first=False)
+
 label_encoder = LabelEncoder()
 train_set.iloc[:, 4] = label_encoder.fit_transform(train_set.iloc[:, 4])
-train_set = train_set[pd.notnull(train_set['Embarked'])]
-train_set.iloc[:, 11] = label_encoder.fit_transform(train_set.iloc[:, 11])
-train_embarked = train_set["Embarked"]
- 
-label_encoder_1hot = OneHotEncoder(sparse=False)
-train_embarked = label_encoder_1hot.fit_transform(train_embarked.values.reshape(-1,1))
-
 test_set.iloc[:, 3] = label_encoder.fit_transform(test_set.iloc[:, 3])
-test_set = test_set[pd.notnull(test_set['Embarked'])]
-test_set.iloc[:, 10] = label_encoder.fit_transform(test_set.iloc[:, 10])
-test_embarked = test_set["Embarked"]
- 
-test_embarked = label_encoder_1hot.fit_transform(test_embarked.values.reshape(-1,1))
-
-#Removing the original now that its encoded
-
-del train_set["Embarked"]
-del test_set["Embarked"]
-
-train_set["EmbarkedS"] = train_embarked[:, 0]
-train_set["EmbarkedC"] = train_embarked[:, 1]
-#train_set["EmbarkedQ"] = train_embarked[:, 2]
-
-test_set["EmbarkedS"] = test_embarked[:, 0]
-test_set["EmbarkedC"] = test_embarked[:, 1]
-#test_set["EmbarkedQ"] = test_embarked[:, 2]
 
 #Removing non numeric columns as they cant be compared
 
@@ -65,7 +43,9 @@ test_set["Age"] = imputer.fit_transform(test_set["Age"].values.reshape(-1,1))
 
 test_set = test_set.fillna(test_set.median())
 
-#Combining the sibling and 
+#Combining the sibling and parent columns
+
+#train_set["Family"] = train_set["SibSp"] + train_set["Parch"]
 
 #Seperating into the independent and dependent datasets
 
@@ -79,12 +59,12 @@ from sklearn.ensemble import RandomForestClassifier
 
 reg = RandomForestClassifier()
 reg.fit(X_train, y_train)
-predictions = reg.predict(X_test)
+y_test = reg.predict(X_test)
 
 #Writing to csv
 
 submission = pd.DataFrame({
         "PassengerId": X_test["PassengerId"],
-        "Survived": predictions
+        "Survived": y_test
     })
 submission.to_csv('submission.csv', index=False)
